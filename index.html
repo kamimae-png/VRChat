@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VRChat 参加確定チケット管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root {
+  --bg: #0d0f14;
+  --bg2: #13161e;
+  --bg3: #1a1e28;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #e8eaf0;
+  --text2: #8b90a0;
+  --text3: #555a6b;
+  --accent: #7c6af7;
+  --accent2: #5e4fd4;
+  --teal: #3dd9a4;
+  --teal2: #1d9e75;
+  --warn: #f5a623;
+  --danger: #f05b5b;
+  --success: #3dd9a4;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Zen Kaku Gothic New', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ── Layout ── */
+.app-wrap { max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+/* ── Header ── */
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 2rem; gap: 12px;
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.logo-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: #fff; flex-shrink: 0;
+}
+.app-title { font-size: 19px; font-weight: 700; color: var(--text); }
+.app-subtitle { font-size: 11px; color: var(--text3); font-family: var(--mono); letter-spacing: 0.05em; }
+.count-pill {
+  font-family: var(--mono); font-size: 12px;
+  background: rgba(124,106,247,0.15); color: var(--accent);
+  border: 1px solid rgba(124,106,247,0.3);
+  padding: 3px 10px; border-radius: 99px;
+}
+.add-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  padding: 9px 18px; border-radius: var(--radius-sm);
+  background: var(--accent); color: #fff; border: none; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.add-btn:hover { background: var(--accent2); }
+.add-btn:active { transform: scale(0.97); }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex; gap: 0; margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  padding: 8px 18px; font-size: 13px; font-family: var(--sans);
+  border: none; background: none; color: var(--text2); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color 0.15s;
+}
+.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.tab:hover:not(.active) { color: var(--text); }
+
+/* ── Ticket Cards ── */
+.ticket-grid { display: flex; flex-direction: column; gap: 10px; }
+
+.ticket-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex; gap: 14px; align-items: flex-start;
+  transition: border-color 0.15s, transform 0.1s;
+  animation: slideIn 0.2s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ticket-card:hover { border-color: var(--border2); }
+.ticket-card.used { opacity: 0.35; pointer-events: none; }
+
+/* Thumbnail */
+.ticket-thumb {
+  width: 58px; height: 58px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  flex-shrink: 0; overflow: hidden;
+  background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative;
+  transition: border-color 0.15s;
+}
+.ticket-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ticket-thumb .ph { font-size: 24px; color: var(--text3); }
+.ticket-thumb:hover { border-color: var(--accent); }
+.ticket-thumb:hover .thumb-ov { opacity: 1; }
+.thumb-ov {
+  position: absolute; inset: 0; background: rgba(124,106,247,0.55);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s;
+  border-radius: var(--radius-sm);
+}
+.thumb-ov i { color: #fff; font-size: 18px; }
+
+/* Body */
+.ticket-body { flex: 1; min-width: 0; }
+.ticket-top {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 10px; margin-bottom: 8px;
+}
+.ticket-name { font-size: 15px; font-weight: 700; color: var(--text); }
+.ticket-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.icon-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 17px; padding: 3px;
+  line-height: 1; display: flex; align-items: center;
+  border-radius: 6px; transition: color 0.12s, background 0.12s;
+}
+.icon-btn:hover { color: var(--text); background: var(--bg3); }
+.icon-btn.del:hover { color: var(--danger); background: rgba(240,91,91,0.1); }
+
+/* Check label */
+.check-label {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 12px; color: var(--text2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px; user-select: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+.check-label:hover { border-color: var(--teal); background: rgba(61,217,164,0.06); }
+.check-label input { display: none; }
+.cb-box {
+  width: 15px; height: 15px; border-radius: 3px;
+  border: 1.5px solid var(--text3);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.12s, border-color 0.12s;
+}
+.check-label input:checked + .cb-box { background: var(--teal2); border-color: var(--teal2); }
+.check-label input:checked + .cb-box::after {
+  content: ''; display: block;
+  width: 8px; height: 5px;
+  border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translate(1px,-1px);
+}
+
+/* Meta */
+.meta-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 6px 16px; margin-top: 4px;
+}
+.meta-item { display: flex; flex-direction: column; gap: 2px; }
+.meta-label { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: 0.04em; text-transform: uppercase; }
+.meta-val { font-size: 13px; color: var(--text2); white-space: pre-wrap; word-break: break-word; }
+
+/* Expiry badge */
+.expiry-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-family: var(--mono);
+  padding: 2px 8px; border-radius: 99px; margin-top: 4px;
+}
+.expiry-badge.ok     { background: rgba(61,217,164,0.12); color: var(--teal); border: 1px solid rgba(61,217,164,0.25); }
+.expiry-badge.soon   { background: rgba(245,166,35,0.12); color: var(--warn); border: 1px solid rgba(245,166,35,0.25); }
+.expiry-badge.over   { background: rgba(240,91,91,0.12);  color: var(--danger); border: 1px solid rgba(240,91,91,0.25); }
+
+/* ── Empty state ── */
+.empty {
+  text-align: center; padding: 4rem 0;
+  color: var(--text3); font-size: 14px;
+}
+.empty i { font-size: 40px; display: block; margin-bottom: 10px; }
+
+/* ── Modal ── */
+.modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65); z-index: 200;
+  align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  width: min(500px, 100%);
+  max-height: 90vh; overflow-y: auto;
+  animation: modalIn 0.18s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 1.5rem; color: var(--text); }
+
+.form-row { margin-bottom: 1.1rem; }
+.form-row label { display: block; font-size: 11px; font-family: var(--mono); color: var(--text3); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+.form-row input, .form-row textarea {
+  width: 100%; padding: 9px 12px; font-size: 14px;
+  font-family: var(--sans);
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  transition: border-color 0.15s;
+  outline: none;
+}
+.form-row input:focus, .form-row textarea:focus { border-color: var(--accent); }
+.form-row textarea { resize: vertical; min-height: 72px; }
+
+/* Image upload */
+.img-upload-area {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius-sm); padding: 1rem;
+  text-align: center; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+.img-upload-area:hover { border-color: var(--accent); background: rgba(124,106,247,0.05); }
+.img-upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.img-preview-wrap { display: flex; align-items: center; gap: 12px; }
+.img-preview { width: 58px; height: 58px; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--border2); }
+.img-remove {
+  font-size: 12px; color: var(--danger); cursor: pointer;
+  background: none; border: none; font-family: var(--sans);
+  padding: 0; display: flex; align-items: center; gap: 4px;
+}
+
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.5rem; }
+.btn-cancel {
+  padding: 8px 18px; font-size: 13px; font-family: var(--sans);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  background: transparent; color: var(--text2); cursor: pointer;
+  transition: background 0.12s;
+}
+.btn-cancel:hover { background: var(--bg3); }
+.btn-save {
+  padding: 8px 20px; font-size: 13px; font-family: var(--sans); font-weight: 700;
+  border: none; border-radius: var(--radius-sm);
+  background: var(--accent); color: #fff; cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+}
+.btn-save:hover { background: var(--accent2); }
+.btn-save:active { transform: scale(0.97); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+@media (max-width: 500px) {
+  .app-title { font-size: 16px; }
+  .add-btn span { display: none; }
+  .ticket-card { padding: 0.85rem 1rem; }
+}
+</style>
+</head>
+<body>
+<div class="app-wrap">
+
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-icon" aria-hidden="true"><i class="ti ti-ticket"></i></div>
+      <div>
+        <div class="app-title">参加確定チケット</div>
+        <div class="app-subtitle">VRCHAT EVENT TICKETS</div>
+      </div>
+      <span class="count-pill" id="count-badge">0枚</span>
+    </div>
+    <button class="add-btn" onclick="openModal()">
+      <i class="ti ti-plus" aria-hidden="true"></i>
+      <span>チケットを追加</span>
+    </button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('active',this)">未使用</button>
+    <button class="tab" onclick="setTab('used',this)">使用済み</button>
+  </div>
+
+  <div class="ticket-grid" id="ticket-list"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2 id="modal-title">チケットを追加</h2>
+
+    <div class="form-row">
+      <label>アイコン画像（任意）</label>
+      <div class="img-upload-area" id="upload-area">
+        <input type="file" accept="image/*" id="f-img" onchange="handleImgSelect(event)">
+        <div id="upload-placeholder">
+          <i class="ti ti-photo-plus" style="font-size:26px;color:var(--text3)" aria-hidden="true"></i>
+          <div style="font-size:12px;color:var(--text3);margin-top:6px">クリックして画像を選択</div>
+        </div>
+        <div id="upload-preview" style="display:none">
+          <div class="img-preview-wrap">
+            <img id="img-preview-el" class="img-preview" src="" alt="プレビュー">
+            <div>
+              <div id="img-filename" style="font-size:12px;color:var(--text2);margin-bottom:6px"></div>
+              <button class="img-remove" onclick="removeImg(event)">
+                <i class="ti ti-x" aria-hidden="true"></i> 画像を削除
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>① イベント名 <span style="color:var(--danger)">*</span></label>
+      <input id="f-name" type="text" placeholder="例: 〇〇ライブ World Tour">
+    </div>
+    <div class="form-row">
+      <label>② 使用期日</label>
+      <input id="f-expiry" type="date">
+    </div>
+    <div class="form-row">
+      <label>③ 使用方法</label>
+      <textarea id="f-method" placeholder="例: Joinボタンから入場 / アイテムを使用 など"></textarea>
+    </div>
+    <div class="form-row">
+      <label>④ 使用日（予定）</label>
+      <input id="f-usedate" type="date">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveTicket()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'vrc_tickets_v1';
+let tickets = [];
+try { tickets = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) {}
+let currentTab = 'active';
+let editId = null;
+let pendingImg = null;
+
+function persist() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets)); } catch(e) {}
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s + 'T00:00:00');
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+function expiryInfo(s) {
+  if (!s) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(s + 'T00:00:00');
+  const diff = Math.ceil((exp - today) / 86400000);
+  if (diff < 0)  return { cls: 'over', label: '期限切れ' };
+  if (diff <= 7) return { cls: 'soon', label: `残${diff}日` };
+  return { cls: 'ok', label: `残${diff}日` };
+}
+function thumbHtml(t) {
+  const inner = t.img
+    ? `<img src="${t.img}" alt="チケット画像">`
+    : `<i class="ti ti-photo ph" aria-hidden="true"></i>`;
+  return `
+    <div class="ticket-thumb" onclick="triggerThumbUpload('${t.id}')" title="${t.img?'画像を変更':'画像を追加'}">
+      ${inner}
+      <div class="thumb-ov"><i class="ti ti-camera" aria-hidden="true"></i></div>
+    </div>
+    <input type="file" accept="image/*" id="thumb-input-${t.id}" style="display:none" onchange="handleThumbChange(event,'${t.id}')">`;
+}
+function render() {
+  const list = document.getElementById('ticket-list');
+  const active = tickets.filter(t => !t.used);
+  const filtered = currentTab === 'used' ? tickets.filter(t => t.used) : active;
+  document.getElementById('count-badge').textContent = active.length + '枚';
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty">
+      <i class="ti ti-ticket" aria-hidden="true"></i>
+      ${currentTab === 'active' ? '未使用のチケットはありません' : '使用済みチケットはありません'}
+    </div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(t => {
+    const ei = expiryInfo(t.expiry);
+    const badge = ei ? `<span class="expiry-badge ${ei.cls}"><i class="ti ti-clock" style="font-size:11px" aria-hidden="true"></i>${ei.label}</span>` : '';
+    return `<div class="ticket-card${t.used ? ' used' : ''}" id="card-${t.id}">
+      ${thumbHtml(t)}
+      <div class="ticket-body">
+        <div class="ticket-top">
+          <div>
+            <div class="ticket-name">${esc(t.name)}</div>
+            ${badge}
+          </div>
+          <div class="ticket-actions">
+            ${!t.used ? `<button class="icon-btn" onclick="editTicket('${t.id}')" aria-label="編集"><i class="ti ti-edit" aria-hidden="true"></i></button>` : ''}
+            <button class="icon-btn del" onclick="delTicket('${t.id}')" aria-label="削除"><i class="ti ti-trash" aria-hidden="true"></i></button>
+            <label class="check-label">
+              <input type="checkbox" ${t.used ? 'checked' : ''} onchange="toggleUsed('${t.id}',this.checked)">
+              <span class="cb-box"></span>使用済み
+            </label>
+          </div>
+        </div>
+        <div class="meta-row">
+          <div class="meta-item"><span class="meta-label">使用期日</span><span class="meta-val">${fmtDate(t.expiry)}</span></div>
+          <div class="meta-item"><span class="meta-label">使用日</span><span class="meta-val">${fmtDate(t.usedate)}</span></div>
+          <div class="meta-item" style="grid-column:1/-1"><span class="meta-label">使用方法</span><span class="meta-val">${esc(t.method) || '—'}</span></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function triggerThumbUpload(id) {
+  const el = document.getElementById('thumb-input-' + id);
+  if (el) el.click();
+}
+function handleThumbChange(e, id) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const t = tickets.find(x => x.id === id);
+    if (t) { t.img = ev.target.result; persist(); render(); }
+  };
+  reader.readAsDataURL(file);
+}
+function toggleUsed(id, checked) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  t.used = checked;
+  persist(); render();
+}
+function delTicket(id) {
+  if (!confirm('このチケットを削除しますか？')) return;
+  tickets = tickets.filter(x => x.id !== id);
+  persist(); render();
+}
+function openModal(clear = true) {
+  if (clear) {
+    editId = null; pendingImg = null;
+    document.getElementById('modal-title').textContent = 'チケットを追加';
+    ['f-name','f-expiry','f-method','f-usedate'].forEach(id => document.getElementById(id).value = '');
+    resetImgUI();
+  }
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function editTicket(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  editId = id; pendingImg = t.img || null;
+  document.getElementById('modal-title').textContent = 'チケットを編集';
+  document.getElementById('f-name').value = t.name || '';
+  document.getElementById('f-expiry').value = t.expiry || '';
+  document.getElementById('f-method').value = t.method || '';
+  document.getElementById('f-usedate').value = t.usedate || '';
+  if (t.img) showImgPreview(t.img, '保存済み画像');
+  else resetImgUI();
+  openModal(false);
+}
+function handleImgSelect(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { pendingImg = ev.target.result; showImgPreview(ev.target.result, file.name); };
+  reader.readAsDataURL(file);
+}
+function showImgPreview(src, name) {
+  document.getElementById('upload-placeholder').style.display = 'none';
+  document.getElementById('upload-preview').style.display = 'block';
+  document.getElementById('img-preview-el').src = src;
+  document.getElementById('img-filename').textContent = name;
+}
+function removeImg(e) {
+  e.stopPropagation(); e.preventDefault();
+  pendingImg = null; resetImgUI();
+}
+function resetImgUI() {
+  document.getElementById('upload-placeholder').style.display = 'block';
+  document.getElementById('upload-preview').style.display = 'none';
+  document.getElementById('img-preview-el').src = '';
+  document.getElementById('f-img').value = '';
+}
+function saveTicket() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) {
+    document.getElementById('f-name').style.borderColor = 'var(--danger)';
+    document.getElementById('f-name').focus();
+    return;
+  }
+  document.getElementById('f-name').style.borderColor = '';
+  const data = {
+    name,
+    expiry:  document.getElementById('f-expiry').value,
+    method:  document.getElementById('f-method').value.trim(),
+    usedate: document.getElementById('f-usedate').value,
+    img: pendingImg || null
+  };
+  if (editId) {
+    Object.assign(tickets.find(x => x.id === editId), data);
+  } else {
+    tickets.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), used: false, ...data });
+  }
+  persist(); closeModal(); render();
+}
+function setTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+render();
+</script>
+</body>
+</html>
