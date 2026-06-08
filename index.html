@@ -63,6 +63,16 @@ body {
   border: 1px solid rgba(124,106,247,0.3);
   padding: 3px 10px; border-radius: 99px;
 }
+.icon-btn-header {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  padding: 9px 14px; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text2);
+  border: 1px solid var(--border2); cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap; text-decoration: none;
+}
+.icon-btn-header:hover { background: var(--bg3); color: var(--text); }
 .add-btn {
   display: flex; align-items: center; gap: 6px;
   font-family: var(--sans); font-size: 13px; font-weight: 500;
@@ -292,11 +302,24 @@ body {
       </div>
       <span class="count-pill" id="count-badge">0枚</span>
     </div>
-    <button class="add-btn" onclick="openModal()">
-      <i class="ti ti-plus" aria-hidden="true"></i>
-      <span>チケットを追加</span>
-    </button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="icon-btn-header" onclick="exportData()" title="データをエクスポート">
+        <i class="ti ti-download" aria-hidden="true"></i>
+        <span>保存</span>
+      </button>
+      <label class="icon-btn-header" title="データをインポート" style="cursor:pointer">
+        <i class="ti ti-upload" aria-hidden="true"></i>
+        <span>読込</span>
+        <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+      </label>
+      <button class="add-btn" onclick="openModal()">
+        <i class="ti ti-plus" aria-hidden="true"></i>
+        <span>チケットを追加</span>
+      </button>
+    </div>
   </header>
+
+  <div id="toast" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1e28;border:1px solid rgba(255,255,255,0.14);color:#e8eaf0;font-size:13px;padding:10px 20px;border-radius:99px;z-index:999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.4)"></div>
 
   <div class="tabs">
     <button class="tab active" onclick="setTab('active',this)">未使用</button>
@@ -528,6 +551,47 @@ function saveTicket() {
     tickets.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), used: false, ...data });
   }
   persist(); closeModal(); render();
+}
+function showToast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = (ok ? '✓ ' : '⚠ ') + msg;
+  t.style.display = 'block';
+  t.style.borderColor = ok ? 'rgba(61,217,164,0.4)' : 'rgba(240,91,91,0.4)';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.display = 'none'; }, 2800);
+}
+function exportData() {
+  if (tickets.length === 0) { showToast('エクスポートするチケットがありません', false); return; }
+  const json = JSON.stringify(tickets, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url; a.download = `vrc-tickets-${date}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('エクスポートしました');
+}
+function importData(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error();
+      const merged = [...tickets];
+      let added = 0;
+      data.forEach(t => {
+        if (!merged.find(x => x.id === t.id)) { merged.push(t); added++; }
+      });
+      tickets = merged;
+      persist(); render();
+      showToast(`${added}件のチケットを読み込みました`);
+    } catch {
+      showToast('ファイルの読み込みに失敗しました', false);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 }
 function setTab(tab, el) {
   currentTab = tab;
